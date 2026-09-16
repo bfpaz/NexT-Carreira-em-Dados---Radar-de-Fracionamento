@@ -10,9 +10,9 @@ Lembre da regra do E2: **não existe viabilidade sem amostra baixada e aberta.**
 
 | | |
 |---|---|
-| **Nome da equipe** | |
+| **Nome da equipe** | Energia Legal |
 | **Integrantes** | Bruno Paz, Danilo, Felipe, Marcio |
-| **Mentor** |  |
+| **Mentor** | Eric, Marcio, João Pedro |
 | **Tema** | Radar de Fracionamento |
 | **Repositório GitHub** | https://github.com/bfpaz/NexT-Carreira-em-Dados---Radar-de-Fracionamento |
 
@@ -25,7 +25,7 @@ Escreva em 2–4 frases. Tema não é problema: o problema diz **quem decide, o 
 > _Exemplo: "A secretaria estadual de saúde de PE precisa decidir onde reforçar equipes antes da próxima temporada de dengue, mas hoje decide sem histórico consolidado de internações por município."_
 
 ```
-(escreva aqui)
+A Neoenergia PE precisa decidir sobre quais as organizações geradoras de energia renovável distribuiída estão fracionando a sua potência gerada para burlar a legislação que classifica o tamanho da geração e a empresa não possui um sistema automatizado para identificar os candidatos a serem fiscalizados
 ```
 
 ---
@@ -35,7 +35,7 @@ Escreva em 2–4 frases. Tema não é problema: o problema diz **quem decide, o 
 Quem usa o dashboard e toma a decisão? Cargo ou papel concreto (secretário, gerente de logística, comandante de policiamento), não "a sociedade". É para essa pessoa que o pitch "vende a solução".
 
 ```
-(escreva aqui)
+Equipe de incorporação de mercado da Neoenergia PE
 ```
 
 ---
@@ -46,10 +46,10 @@ No mínimo 3, respondíveis com os dados escolhidos. Uma pergunta respondível t
 
 | # | Pergunta | Que decisão ela informa? | Respondível com os dados? (verificado na amostra) |
 |---|---|---|---|
-| 1 | | | |
-| 2 | | | |
-| 3 | | | |
-| 4 (opcional) | | | |
+| 1 | Quais/quantos são os empreendimentos do mesmo titular que ultrapassam o limite da ANEEL? | Possíveis suspeitos de fracionamento | CPF/CNPJ do titular, município, potência gerada... |
+| 2 | Quais destes possíveis suspeitos têm empreendimentos posteriores à data de promulgação da legislação em questão? | Prováveis suspeitos de fracionamento | Data de referência |
+| 3 | Quais fontes, classes de consumo e subgrupo concentram os casos suspeitos? | Quais tipos de geração focar | Fonte, Classe, Subgrupo |
+| 4 (opcional) | Quanta potência está sob suspeita em PE? | Por onde começar a fiscalização | Potência gerada |
 | 5 (opcional) | | | |
 
 ---
@@ -60,7 +60,7 @@ Uma linha por fonte. A amostra precisa ter sido **baixada e aberta hoje** — co
 
 | Fonte | Link | Formato | Volume estimado | Licença/acesso | Amostra baixada e aberta? (sim/não) | Colunas-chave confirmadas na amostra |
 |---|---|---|---|---|---|---|
-| | | | | | | |
+| ANEEL | https://dadosabertos.aneel.gov.br/dataset/relacao-de-empreendimentos-de-geracao-distribuida/resource/3fabb9e8-668a-4f94-8f0e-ed9cd2682979 | CSV | 1,48gb | Aberta | | |
 | | | | | | | |
 
 ---
@@ -72,19 +72,19 @@ Defina primeiro a fatia mínima: o menor recorte que ainda exercita o ciclo comp
 **Fatia mínima (compromisso):**
 
 ```
-(ex.: internações por dengue em PE, 2021–2025, com dashboard de evolução e custo por município)
+Ranking de suspeitos de fracionamento em PE, anual 2020-2026, com quadro de indicadores de evolução de potência sob suspeita
 ```
 
 **Extensões desejáveis (apenas se sobrar tempo):**
 
 ```
-(ex.: ampliar para o Nordeste; incluir cobertura vacinal)
+Ampliar monitoramento para os outros estados, agrupando por região
 ```
 
 **Fora de escopo (o que decidimos NÃO fazer):**
 
 ```
-(ex.: previsão com machine learning; dados de outros agravos)
+Classificação por machine learning em potencial suspeito para previnir fracionamento
 ```
 
 ---
@@ -95,9 +95,9 @@ Ao menos 3 riscos do **seu** projeto (não genéricos). Consulte a tabela de ris
 
 | Risco | Sinal precoce | Mitigação | Responsável por monitorar |
 |---|---|---|---|
-| | | | |
-| | | | |
-| | | | |
+| Dependência de especialista técnico em geração distribuiída | Dúvidas conceituais quanto aos dados | Consultar especialistas (ex.: professor universitário) | Scrum Master |
+| Carência de informação da necessidade do cliente | Discordância sobre o objetivo decisório | Consultar mentores quanto à regra de negócio | Product Owner |
+| Dashboard saturado de informações | Número de gráficos e análises feitas na exploração de dados | Revisar o objetivo de negócio periodicamente para verificar a utilidade das análises | Visualização de dados |
 
 ---
 
@@ -107,15 +107,15 @@ Todos codificam — papéis distribuem responsabilidade de acompanhamento, não 
 
 | Papel | Titular | Sombra |
 |---|---|---|
-| Coordenação de projeto | | |
-| Dados / pipeline | | |
-| Análise | | |
-| Visualização / pitch | | |
+| Coordenação de projeto | Bruno Paz | Danilo Cesar |
+| Dados / pipeline | Luis Felipe | Bruno Paz |
+| Análise | Marcio | Danilo Cesar |
+| Visualização / pitch | Danilo Cesar | Marcio |
 
 **Canal de comunicação da equipe (fora do horário de aula):**
 
 ```
-(ex.: grupo no WhatsApp + board no GitHub Projects)
+grupo no WhatsApp + board no GitHub Projects
 ```
 
 ---
