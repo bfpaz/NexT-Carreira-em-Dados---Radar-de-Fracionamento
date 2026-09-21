@@ -11,7 +11,7 @@ Lembre da regra do E2: **não existe viabilidade sem amostra baixada e aberta.**
 | | |
 |---|---|
 | **Nome da equipe** | Energia Legal |
-| **Integrantes** | Bruno Paz, Danilo, Felipe, Marcio |
+| **Integrantes** | Bruno Paz, Danilo, Felipe |
 | **Mentor** | Eric, Marcio, João Pedro |
 | **Tema** | Radar de Fracionamento |
 | **Repositório GitHub** | https://github.com/bfpaz/NexT-Carreira-em-Dados---Radar-de-Fracionamento |
@@ -109,8 +109,8 @@ Todos codificam — papéis distribuem responsabilidade de acompanhamento, não 
 |---|---|---|
 | Coordenação de projeto | Bruno Paz | Danilo Cesar |
 | Dados / pipeline | Luis Felipe | Bruno Paz |
-| Análise | Marcio | Danilo Cesar |
-| Visualização / pitch | Danilo Cesar | Marcio |
+| Análise | Danilo Cesar | Luis Felipe |
+| Visualização / pitch | Danilo Cesar | Luis Felipe |
 
 **Canal de comunicação da equipe (fora do horário de aula):**
 
