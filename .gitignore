@@ -1,4 +1,4 @@
-# Caches e bytecode do Python
 __pycache__/
 *.py[cod]
 .pytest_cache/
+config.py

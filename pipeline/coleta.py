@@ -42,5 +42,5 @@ with ZipFile(DESTINO_ZIP, "r") as zip_file:
 
 logger.info("Fim da coleta de geração distribuída.")
 logger.info("CSVs encontrados: %s", arquivos_csv)
-logger.info("ZIP salvo em: %s", DESTINO_ZIP)
-logger.info("CSV salvo em: %s", DESTINO_CSV)
+logger.info("ZIP salvo na pasta raw.")
+logger.info("CSV salvo na pasta raw.")
