@@ -1,5 +1,11 @@
 CREATE DATABASE neoenergia_divisao;
 
+DROP TABLE IF EXISTS usina, municipio, distribuidora, titular CASCADE;
+
+DROP TYPE IF EXISTS porte_enum CASCADE;
+DROP TYPE IF EXISTS classe_consumo_enum CASCADE;
+DROP TYPE IF EXISTS subgrupo_tarifario_enum CASCADE;
+
 -- Tipos ENUM
 CREATE TYPE tipo_geracao_enum AS ENUM ('UFV', 'UTE');
 CREATE TYPE porte_enum AS ENUM ('Microgeracao', 'Minigeracao');
