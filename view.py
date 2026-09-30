@@ -5,12 +5,22 @@ from pathlib import Path
 import pandas as pd
 import streamlit as st
 from sqlalchemy import create_engine, text
+from dotenv import load_dotenv
+import os
 
 
-# Adiciona a raiz do projeto ao caminho de importação para localizar config.py.
-RAIZ_PROJETO = Path(__file__).resolve().parents[1]
-if str(RAIZ_PROJETO) not in sys.path:
-    sys.path.insert(0, str(RAIZ_PROJETO))
+# Carregar variáveis do .env
+load_dotenv()
+
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+DB_HOST = os.getenv("DB_HOST")
+DB_PORT = os.getenv("DB_PORT")
+DB_NAME = os.getenv("DB_NAME")
+
+# Montar a URL de conexão
+POSTGRES_URL = f"postgresql+psycopg2://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+
 
 # Define os metadados e o layout da página Streamlit.
 st.set_page_config(
@@ -22,9 +32,6 @@ st.set_page_config(
 
 @st.cache_resource
 def obter_engine():
-    # Cria e reutiliza o mecanismo de conexão com o PostgreSQL.
-    from config import POSTGRES_URL
-
     return create_engine(POSTGRES_URL, pool_pre_ping=True)
 
 
@@ -38,48 +45,19 @@ def consultar(sql: str) -> pd.DataFrame:
 # resultados por porte, classe de consumo e subgrupo tarifário.
 SQL_SUSPEITOS_CATEGORIZADO = """
 SELECT
-    -- Campos que identificam cada grupo exibido nos gráficos.
-    e."DscPorte" AS porte,
-    e."DscClasseConsumo" AS classe_consumo,
-    e."DscSubGrupoTarifario" AS subgrupo,
-    -- Conta titulares sem duplicá-los e soma a potência instalada.
-    COUNT(DISTINCT e."idTitular") AS qtd_suspeitos,
-    SUM(e."MdaPotenciaInstaladaKW") AS potencia_total_kw
-FROM empreendimentos e
-INNER JOIN (
-    -- Seleciona titulares e municípios cuja potência acumulada excede o limite.
-    SELECT
-        e2."idTitular",
-        e2."idMunicipio",
-        e2."DscPorte"
-    FROM empreendimentos e2
-    -- Considera apenas os portes sujeitos às regras de potência.
-    WHERE e2."DscPorte" IN ('Microgeracao', 'Minigeracao')
-    -- Calcula a potência acumulada de cada titular por município e porte.
-    GROUP BY
-        e2."idTitular",
-        e2."idMunicipio",
-        e2."DscPorte"
-    HAVING
-        -- Microgeração é sinalizada quando ultrapassa 75 kW.
-        (
-            e2."DscPorte" = 'Microgeracao'
-            AND SUM(e2."MdaPotenciaInstaladaKW") > 75
-        )
-        OR
-        -- Minigeração é sinalizada quando ultrapassa 3.000 kW.
-        (
-            e2."DscPorte" = 'Minigeracao'
-            AND SUM(e2."MdaPotenciaInstaladaKW") > 3000
-        )
-) suspeitos
-    -- Relaciona os empreendimentos aos titulares identificados como suspeitos.
-    ON e."idTitular" = suspeitos."idTitular"
--- Consolida o resultado para cada combinação mostrada nos gráficos.
-GROUP BY
-    e."DscPorte",
-    e."DscClasseConsumo",
-    e."DscSubGrupoTarifario"
+    u.porte,
+    u.classe_consumo,
+    u.subgrupo_tarifario,
+    COUNT(DISTINCT t.id_titular) AS qtd_suspeitos,
+    SUM(u.potencia_instalada) AS potencia_total_kw
+FROM usina u
+JOIN titular t ON u.id_titular = t.id_titular
+JOIN municipio m ON u.id_municipio = m.id_municipio
+WHERE m.estado = 'PE'
+GROUP BY u.porte, u.classe_consumo, u.subgrupo_tarifario
+HAVING
+    (u.porte = 'Microgeracao' AND SUM(u.potencia_instalada) > 75)
+    OR (u.porte = 'Minigeracao' AND SUM(u.potencia_instalada) > 3000)
 ORDER BY qtd_suspeitos DESC
 """
 
@@ -87,29 +65,38 @@ ORDER BY qtd_suspeitos DESC
 # potência, incluindo quantidade de empreendimentos e potência acumulada.
 SQL_SUSPEITOS_POR_TITULAR = """
 SELECT
-    e."idTitular" AS id_titular,
-    e."idMunicipio" AS id_municipio,
-    e."DscPorte" AS porte,
-    COUNT(e."idEmpreendimento") AS qtd_empreendimentos,
-    SUM(e."MdaPotenciaInstaladaKW") AS potencia_total_kw
-FROM empreendimentos e
-GROUP BY
-    e."idTitular",
-    e."idMunicipio",
-    e."DscPorte"
+    t.cpf_cnpj,
+    t.nome_titular,
+    u.porte,
+    m.nome_municipio,
+    COUNT(u.id_usina) AS qtd_usinas,
+    SUM(u.potencia_instalada) AS potencia_total_kw
+FROM usina u
+JOIN titular t ON u.id_titular = t.id_titular
+JOIN municipio m ON u.id_municipio = m.id_municipio
+WHERE m.estado = 'PE'
+GROUP BY t.cpf_cnpj, t.nome_titular, u.porte, m.nome_municipio
 HAVING
-    (
-        e."DscPorte" = 'Microgeracao'
-        AND SUM(e."MdaPotenciaInstaladaKW") > 75
-    )
-    OR
-    (
-        e."DscPorte" = 'Minigeracao'
-        AND SUM(e."MdaPotenciaInstaladaKW") > 3000
-    )
-ORDER BY e."idTitular"
+    (u.porte = 'Microgeracao' AND SUM(u.potencia_instalada) > 75)
+    OR (u.porte = 'Minigeracao' AND SUM(u.potencia_instalada) > 3000)
+ORDER BY potencia_total_kw DESC
 """
-
+SQL_SUSPEITOS_TITULARES_DETALHADO = """
+SELECT t.cpf_cnpj,
+       t.nome_titular,
+       u.porte,
+       m.nome_municipio,
+       COUNT(u.id_usina) AS qtd_usinas,
+       SUM(u.potencia_instalada) AS potencia_total
+FROM usina u
+JOIN titular t ON u.id_titular = t.id_titular
+JOIN municipio m ON u.id_municipio = m.id_municipio
+WHERE m.estado = 'PE'
+GROUP BY t.cpf_cnpj, t.nome_titular, u.porte, m.nome_municipio
+HAVING (u.porte = 'Microgeracao' AND SUM(u.potencia_instalada) > 75)
+    OR (u.porte = 'Minigeracao' AND SUM(u.potencia_instalada) > 3000)
+ORDER BY potencia_total DESC
+"""
 
 st.title("🔎 Radar de Fracionamento")
 
@@ -117,6 +104,7 @@ st.title("🔎 Radar de Fracionamento")
 try:
     quadro = consultar(SQL_SUSPEITOS_CATEGORIZADO)
     quadro_titulares = consultar(SQL_SUSPEITOS_POR_TITULAR)
+    quadro_titulares_detalhado = consultar(SQL_SUSPEITOS_TITULARES_DETALHADO)
 except Exception:
     st.error("Não foi possível consultar o PostgreSQL.")
     st.info(
@@ -126,9 +114,22 @@ except Exception:
     st.stop()
 
 # Separa o resumo atual e o novo detalhamento em abas.
-aba_categorias, aba_titulares = st.tabs(
-    ["Resumo por categoria", "Suspeitos por titular e município"]
+aba_categorias, aba_titulares, aba_detalhado = st.tabs(
+    ["Resumo por categoria", "Suspeitos por titular e município", "Detalhamento por titular"]
 )
+
+with aba_detalhado:
+    st.subheader("Titulares com potência acima do limite em PE")
+
+    # Exibir tabela
+    st.dataframe(quadro_titulares_detalhado, width="stretch", hide_index=True)
+
+    # Criar gráfico de barras com os maiores titulares
+    top_n = quadro_titulares_detalhado.head(20)  # top 20 por potência
+    st.bar_chart(
+        data=top_n.set_index("nome_titular")["potencia_total"],
+        use_container_width=True
+    )
 
 with aba_categorias:
     # Combina classe e subgrupo tarifário para formar as categorias dos gráficos.
