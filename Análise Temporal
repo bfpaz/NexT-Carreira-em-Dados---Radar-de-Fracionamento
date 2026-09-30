@@ -1,0 +1,396 @@
+#Importes Adicionais
+import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns
+#Funções de Carga e Tratamento de Análise Temporal (dados do CSV)
+@st.cache_data
+def carregar_dados():
+    # Lê o CSV tratado e converte potência e data para os tipos corretos.
+    df = pd.read_csv(DATA_PATH)
+    df["potencia_instalada"] = pd.to_numeric(
+        df["potencia_instalada"], errors="coerce")
+    df["data_atualizacao_cadastral"] = pd.to_datetime(
+        df["data_atualizacao_cadastral"], errors="coerce"
+    )
+    return df
+
+
+def montar_analise_01(df):
+    limiar = 75.0
+
+    agrupado = (
+        df.groupby(["cpf_cnpj", "nome_titular",
+                    "municipio", "estado"], as_index=False)
+        .agg(
+            qtd_empreendimentos=("cod_empreendimento", "count"),
+            potencia_total_kw=("potencia_instalada", "sum"),
+        )
+    )
+
+    suspeitos = agrupado[
+        (agrupado["qtd_empreendimentos"] > 1)
+        & (agrupado["potencia_total_kw"] > limiar)
+    ]
+
+    df_suspeitos = pd.merge(
+        df,
+        suspeitos[["cpf_cnpj", "municipio"]],
+        on=["cpf_cnpj", "municipio"],
+        how="inner",
+    )
+
+    df_tempo = df.dropna(subset=["data_atualizacao_cadastral"]).copy()
+    df_tempo["trimestre"] = df_tempo["data_atualizacao_cadastral"].dt.to_period(
+        "Q")
+
+    evolucao = (
+        df_tempo.groupby("trimestre")
+        .agg(
+            novas_usinas=("cod_empreendimento", "count"),
+            potencia_adicionada_kw=("potencia_instalada", "sum"),
+            potencia_media_usina_kw=("potencia_instalada", "mean"),
+        )
+        .reset_index()
+    )
+    evolucao["periodo"] = evolucao["trimestre"].astype(str)
+    evolucao["potencia_acumulada_kw"] = evolucao["potencia_adicionada_kw"].cumsum()
+    evolucao["variacao_qoq_%"] = evolucao["potencia_adicionada_kw"].pct_change() * \
+        100
+
+    def diagnosticar_tendencia(valor):
+        if pd.isna(valor):
+            return "Base Inicial"
+        if valor > 15:
+            return "Aceleração Forte"
+        if valor > 0:
+            return "Crescimento Moderado"
+        if valor > -15:
+            return "Estabilização / Ligeira Queda"
+        return "Retração / Queda Forte"
+
+    evolucao["status_trimestral"] = evolucao["variacao_qoq_%"].apply(
+        diagnosticar_tendencia)
+
+    df_suspeitos_tempo = df_suspeitos.dropna(
+        subset=["data_atualizacao_cadastral"]).copy()
+    df_suspeitos_tempo["trimestre"] = df_suspeitos_tempo["data_atualizacao_cadastral"].dt.to_period(
+        "Q")
+
+    usinas_gemeas_tri = (
+        df_suspeitos_tempo.groupby(
+            ["cpf_cnpj", "nome_titular", "municipio", "trimestre"])
+        .agg(
+            qtd_usinas_no_trimestre=("cod_empreendimento", "count"),
+            potencia_no_trimestre_kw=("potencia_instalada", "sum"),
+        )
+        .reset_index()
+    )
+
+    gemeas_mesmo_tri = usinas_gemeas_tri[
+        usinas_gemeas_tri["qtd_usinas_no_trimestre"] > 1
+    ].sort_values(by="potencia_no_trimestre_kw", ascending=False)
+
+    def categorizar_fase_regulatoria(tri):
+        ano = tri.year
+        if ano <= 2021:
+            return "1. RN 482/2012 (Isenção Total / Regime Antigo)"
+        if ano == 2022:
+            return "2. Lei 14.300/22 (Corrida pelo Direito Adquirido)"
+        return "3. Transição Tarifária (Cobrança Fio B / Rigor Técnico)"
+
+    evolucao["fase_regulatoria"] = evolucao["trimestre"].apply(
+        categorizar_fase_regulatoria)
+
+    resumo_regulatorio = (
+        evolucao.groupby("fase_regulatoria")
+        .agg(
+            qtd_trimestres=("trimestre", "count"),
+            total_usinas=("novas_usinas", "sum"),
+            potencia_total_kw=("potencia_adicionada_kw", "sum"),
+            media_potencia_por_trimestre_kw=("potencia_adicionada_kw", "mean"),
+        )
+        .reset_index()
+    )
+
+    velocidade_titular = (
+        df_suspeitos_tempo.groupby(["cpf_cnpj", "nome_titular", "municipio"])
+        .agg(
+            total_usinas=("cod_empreendimento", "count"),
+            potencia_total_kw=("potencia_instalada", "sum"),
+            trimestres_ativos=("trimestre", "nunique"),
+            primeiro_trimestre=("trimestre", "min"),
+            ultimo_trimestre=("trimestre", "max"),
+            max_usinas_num_unico_tri=(
+                "trimestre", lambda x: x.value_counts().max()),
+        )
+        .reset_index()
+    )
+    velocidade_titular["duracao_expansao_trimestres"] = (
+        (velocidade_titular["ultimo_trimestre"] - velocidade_titular["primeiro_trimestre"]).apply(
+            lambda x: x.n + 1 if pd.notna(x) else 1
+        )
+    )
+
+    def classificar_comportamento(row):
+        if row["duracao_expansao_trimestres"] == 1:
+            return "Agressivo (Conexão em Bloco no Mesmo Trimestre)"
+        if row["max_usinas_num_unico_tri"] > 1 and row["duracao_expansao_trimestres"] > 1:
+            return "Híbrido (Blocos em Trimestres Diferentes)"
+        return "Gradual (1 usina por trimestre/período)"
+
+    velocidade_titular["perfil_comportamental"] = velocidade_titular.apply(
+        classificar_comportamento, axis=1
+    )
+
+    return {
+        "evolucao": evolucao,
+        "gemeas_mesmo_tri": gemeas_mesmo_tri,
+        "resumo_regulatorio": resumo_regulatorio,
+        "velocidade_titular": velocidade_titular,
+        "suspeitos_qtd": len(suspeitos),
+    }
+
+
+def montar_analise_02(df):
+    df_tempo = df.dropna(subset=["data_atualizacao_cadastral"]).copy()
+    df_tempo["ano"] = df_tempo["data_atualizacao_cadastral"].dt.year
+    df_tempo["trimestre"] = df_tempo["data_atualizacao_cadastral"].dt.to_period(
+        "Q")
+
+    condicoes_porte = [
+        (df_tempo["potencia_instalada"] <= 75),
+        ((df_tempo["potencia_instalada"] > 75) &
+         (df_tempo["potencia_instalada"] <= 1000)),
+        (df_tempo["potencia_instalada"] > 1000),
+    ]
+    rotulos_porte = [
+        "1. MicroGD (<=75 kW)",
+        "2. MiniGD Média (75kW-1MW)",
+        "3. MiniGD Grande (>1MW)",
+    ]
+    df_tempo["porte_mercado"] = np.select(
+        condicoes_porte, rotulos_porte, default="Outros")
+
+    def definir_ciclo_regulatorio(ano):
+        if ano <= 2021:
+            return "RN 482/12 (Fase de Atração / Isenção Fio B)"
+        if ano == 2022:
+            return "Lei 14.300/22 (Corrida do Direito Adquirido)"
+        return "Transição Fio B (Competitividade & Escala)"
+
+    df_tempo["ciclo_regulatorio"] = df_tempo["ano"].apply(
+        definir_ciclo_regulatorio)
+
+    evolucao_porte = (
+        df_tempo.groupby(["ano", "porte_mercado"])
+        .agg(
+            qtd_usinas=("cod_empreendimento", "count"),
+            potencia_mw=("potencia_instalada", lambda x: x.sum() / 1000),
+        )
+        .reset_index()
+    )
+
+    matriz_porte_mw = evolucao_porte.pivot(
+        index="ano", columns="porte_mercado", values="potencia_mw"
+    ).fillna(0)
+    matriz_porte_mw["Total_Ano_MW"] = matriz_porte_mw.sum(axis=1)
+    matriz_porte_mw["CAPEX_Estimado_Mi_BRL"] = matriz_porte_mw["Total_Ano_MW"] * 3.8
+
+    ciclo_mercado = (
+        df_tempo.groupby("ciclo_regulatorio")
+        .agg(
+            duracao_anos=("ano", "nunique"),
+            novas_usinas=("cod_empreendimento", "count"),
+            potencia_adicionada_mw=(
+                "potencia_instalada", lambda x: x.sum() / 1000),
+            potencia_media_por_usina_kw=("potencia_instalada", "mean"),
+            mediana_potencia_kw=("potencia_instalada", "median"),
+        )
+        .reset_index()
+    )
+    ciclo_mercado["capex_total_mi_brl"] = ciclo_mercado["potencia_adicionada_mw"] * 3.8
+    ciclo_mercado["ritmo_medio_mw_por_ano"] = (
+        ciclo_mercado["potencia_adicionada_mw"] / ciclo_mercado["duracao_anos"]
+    )
+
+    minigd_tempo = df_tempo[df_tempo["potencia_instalada"] > 75]
+    minigd_cron = (
+        minigd_tempo.groupby("trimestre")
+        .agg(potencia_minigd_mw=("potencia_instalada", lambda x: x.sum() / 1000))
+        .reset_index()
+        .sort_values(by="trimestre")
+    )
+
+    return {
+        "matriz_porte_mw": matriz_porte_mw,
+        "ciclo_mercado": ciclo_mercado,
+        "minigd_cron": minigd_cron,
+    }
+#Funções de Rederização das Análises Temporais na Interface
+def render_analise_01(df):
+    resultado = montar_analise_01(df)
+    evolucao = resultado["evolucao"]
+    gemeas_mesmo_tri = resultado["gemeas_mesmo_tri"]
+    resumo_regulatorio = resultado["resumo_regulatorio"]
+    velocidade_titular = resultado["velocidade_titular"]
+
+    st.subheader("Análise Temporal 01 - Dinâmica da rede e suspeitos")
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("Usinas registradas", f"{df.shape[0]:,.0f}")
+    col2.metric("Potência acumulada",
+                f"{evolucao['potencia_acumulada_kw'].iloc[-1] / 1000:,.1f} MW")
+    col3.metric("Casos suspeitos", f"{resultado['suspeitos_qtd']:,}")
+    col4.metric("Trimestres analisados", f"{evolucao['trimestre'].nunique()}")
+
+    st.subheader("1. Evolução trimestral da rede")
+    linha = evolucao.set_index("periodo")
+    fig, ax1 = plt.subplots(figsize=(12, 5))
+    ax1.bar(linha.index, linha["potencia_adicionada_kw"] /
+            1000, color="#1f77b4", alpha=0.8)
+    ax1.set_ylabel("Potência Adicionada (MW)")
+    ax1.set_xlabel("Trimestre")
+    ax1.tick_params(axis="x", rotation=45)
+
+    ax2 = ax1.twinx()
+    ax2.plot(linha.index, linha["potencia_acumulada_kw"] /
+             1000, color="#d62728", marker="o")
+    ax2.set_ylabel("Potência Acumulada (MW)")
+    st.pyplot(fig)
+
+    st.dataframe(
+        evolucao[["periodo", "novas_usinas", "potencia_adicionada_kw",
+                  "potencia_acumulada_kw", "variacao_qoq_%", "status_trimestral"]]
+        .style.format({"potencia_adicionada_kw": "{:.0f}", "potencia_acumulada_kw": "{:.0f}", "variacao_qoq_%": "{:.2f}"}),
+        width="stretch",
+    )
+
+    st.subheader("2. Comparativo por fase regulatória")
+    resumo_regulatorio["potencia_total_mw"] = resumo_regulatorio["potencia_total_kw"] / 1000
+    resumo_regulatorio["media_trimestre_mw"] = resumo_regulatorio["media_potencia_por_trimestre_kw"] / 1000
+    col_a, col_b = st.columns(2)
+    with col_a:
+        st.bar_chart(resumo_regulatorio.set_index("fase_regulatoria")[
+                     "potencia_total_mw"])
+    with col_b:
+        st.bar_chart(resumo_regulatorio.set_index("fase_regulatoria")[
+                     "media_trimestre_mw"])
+    st.dataframe(resumo_regulatorio, width="stretch")
+
+    st.subheader("3. Perfil comportamental dos titulares")
+    perfil = (
+        velocidade_titular["perfil_comportamental"].value_counts(
+            normalize=True) * 100
+    ).reset_index()
+    perfil.columns = ["perfil", "porcentagem"]
+    fig2, ax = plt.subplots(figsize=(8, 5))
+    ax.pie(
+        perfil["porcentagem"],
+        labels=perfil["perfil"],
+        autopct="%1.1f%%",
+        startangle=140,
+        colors=["#d95f02", "#7570b3", "#1b9e77"],
+        wedgeprops={"width": 0.4, "edgecolor": "w"},
+    )
+    ax.set_title("Distribuição do perfil comportamental")
+    st.pyplot(fig2)
+    st.dataframe(
+        velocidade_titular[["cpf_cnpj", "nome_titular", "municipio", "total_usinas",
+                            "potencia_total_kw", "duracao_expansao_trimestres", "perfil_comportamental"]]
+        .sort_values("potencia_total_kw", ascending=False)
+        .head(10),
+        width="stretch",
+    )
+
+    st.subheader("4. Casos de usinas gêmeas no mesmo trimestre")
+    st.dataframe(
+        gemeas_mesmo_tri.head(10)[["cpf_cnpj", "nome_titular", "municipio",
+                                   "trimestre", "qtd_usinas_no_trimestre", "potencia_no_trimestre_kw"]],
+        width="stretch",
+    )
+
+
+def render_analise_02(df):
+    resultado = montar_analise_02(df)
+    matriz_porte_mw = resultado["matriz_porte_mw"]
+    ciclo_mercado = resultado["ciclo_mercado"]
+    minigd_cron = resultado["minigd_cron"]
+
+    st.subheader("Análise Temporal 02 - Portes, ciclos regulatórios e MiniGD")
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Total potência anual",
+                f"{matriz_porte_mw['Total_Ano_MW'].sum():,.1f} MW")
+    col2.metric("Capex estimado",
+                f"R$ {matriz_porte_mw['CAPEX_Estimado_Mi_BRL'].sum():,.1f} Mi")
+    col3.metric("Projetos >75 kW",
+                f"{minigd_cron['potencia_minigd_mw'].sum():,.1f} MW")
+
+    st.subheader("1. Evolução anual da potência por porte de mercado")
+    cols_porte = [c for c in matriz_porte_mw.columns if c not in [
+        "Total_Ano_MW", "CAPEX_Estimado_Mi_BRL"]]
+    fig, ax = plt.subplots(figsize=(12, 6))
+    matriz_porte_mw[cols_porte].plot(
+        kind="bar", stacked=True, ax=ax, colormap="Spectral", width=0.7)
+    ax.set_title("Evolução da potência adicionada por porte de mercado (MW)")
+    ax.set_xlabel("Ano")
+    ax.set_ylabel("Potência (MW)")
+    ax.legend(title="Porte de Mercado",
+              bbox_to_anchor=(1.02, 1), loc="upper left")
+    for i, total in enumerate(matriz_porte_mw["Total_Ano_MW"]):
+        if total > 0:
+            ax.annotate(f"{total:.1f} MW", (i, total), ha="center", va="bottom", xytext=(
+                0, 3), textcoords="offset points", fontsize=8, fontweight="bold")
+    st.pyplot(fig)
+    st.dataframe(matriz_porte_mw.round(2), width="stretch")
+
+    st.subheader("2. Impacto dos marcos regulatórios")
+    col_a, col_b = st.columns(2)
+    with col_a:
+        st.bar_chart(ciclo_mercado.set_index("ciclo_regulatorio")[
+            "ritmo_medio_mw_por_ano"])
+    with col_b:
+        st.bar_chart(ciclo_mercado.set_index("ciclo_regulatorio")[
+            "potencia_media_por_usina_kw"])
+    st.dataframe(ciclo_mercado[["ciclo_regulatorio", "novas_usinas", "potencia_adicionada_mw",
+                                "ritmo_medio_mw_por_ano", "potencia_media_por_usina_kw", "capex_total_mi_brl"]], width="stretch")
+
+    st.subheader("3. Entrada trimestral de MiniGD (>75 kW)")
+    fig2, ax2 = plt.subplots(figsize=(12, 5))
+    ax2.plot(minigd_cron["trimestre"].astype(
+        str), minigd_cron["potencia_minigd_mw"], marker="o", color="#d95f02")
+    ax2.fill_between(minigd_cron["trimestre"].astype(
+        str), minigd_cron["potencia_minigd_mw"], color="#d95f02", alpha=0.2)
+    ax2.set_title("Entrada trimestral de projetos MiniGD (>75 kW)")
+    ax2.set_xlabel("Trimestre")
+    ax2.set_ylabel("Potência (MW)")
+    ax2.tick_params(axis="x", rotation=45)
+    st.pyplot(fig2)
+    st.dataframe(minigd_cron, width="stretch")
+
+
+def renderizar_analise_temporal():
+    # Carrega o CSV e, se ele não existir, avisa sem derrubar o restante da página.
+    try:
+        df = carregar_dados()
+    except FileNotFoundError:
+        st.warning(
+            f"Arquivo {DATA_PATH.name} não encontrado em {DATA_PATH.parent}. "
+            "A análise temporal não pôde ser exibida."
+        )
+        return
+
+    # Mantém a estrutura original: uma aba para cada análise temporal.
+    tab1, tab2 = st.tabs(["Análise 01", "Análise 02"])
+    with tab1:
+        render_analise_01(df)
+    with tab2:
+        render_analise_02(df)
+
+#Interface do Streamlit Chamando a Análise Temporal
+
+# Bloco introdutório: contexto temporal da geração distribuída, vindo do CSV.
+st.header("Contexto: análise temporal da geração distribuída")
+renderizar_analise_temporal()
+
+# Separa visualmente o bloco introdutório do radar principal.
+st.divider()
+st.header("Radar de fracionamento")
