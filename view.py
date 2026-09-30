@@ -136,7 +136,7 @@ with aba_categorias:
     quadro["categoria"] = (
         quadro["classe_consumo"].astype(str)
         + " | "
-        + quadro["subgrupo"].astype(str)
+        + quadro["subgrupo_tarifario"].astype(str)
     )
 
     # Permite escolher Minigeração, Microgeração ou os dois portes.
