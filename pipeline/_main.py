@@ -1,7 +1,7 @@
 import logging
-from coleta import executar_coleta
-from transformacao import executar_transformacao
-from carga import executar_carga
+from _coleta import executar_coleta
+from _transformacao import executar_transformacao
+from _carga import executar_carga
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
 
