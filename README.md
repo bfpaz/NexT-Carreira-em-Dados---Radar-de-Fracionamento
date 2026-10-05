@@ -84,12 +84,12 @@ O projeto contou com a orientação dos mentores **Erick**, **Marcio** e **João
 
 ## Cuidados e limitações
 
-[x] Um mesmo titular pode constar com grafias diferentes, exigindo normalização;
-[x] Nomes semelhantes podem gerar agrupamentos incorretos;
-[x] O limiar de potência deve ser definido e validado com a demandante;
-[x] Os resultados são indícios e requerem avaliação humana;
-[x] Dados de titulares devem ser tratados com atenção, evitando exposição desnecessária de informações pessoais;
-[x] Informações individuais não devem ser publicadas quando não forem necessárias.
+- [x] Um mesmo titular pode constar com grafias diferentes, exigindo normalização;
+- [x] Nomes semelhantes podem gerar agrupamentos incorretos;
+- [x] O limiar de potência deve ser definido e validado com a demandante;
+- [x] Os resultados são indícios e requerem avaliação humana;
+- [x] Dados de titulares devem ser tratados com atenção, evitando exposição desnecessária de informações pessoais;
+- [x] Informações individuais não devem ser publicadas quando não forem necessárias.
 
 ## Passo a passo para utilização desta ferramenta
 
