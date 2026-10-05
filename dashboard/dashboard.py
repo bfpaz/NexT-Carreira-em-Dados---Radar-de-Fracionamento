@@ -387,14 +387,14 @@ elif st.session_state.aba == "Visão Geral":
     st.plotly_chart(fig, use_container_width=True)
 
 elif st.session_state.aba == "Candidatos":
-    st.header("Candidatos")
+    st.header("Candidatos a fiscalização")
     
     # Exibe os totais de titulares suspeitos e municípios em cartões lado a lado.
     total_suspeitos = quadro_titulares["nome_titular"].nunique()
     total_municipios = quadro_titulares["nome_municipio"].nunique()
     
     quadro_suspeitos, quadro_municipios_col = st.columns(2)
-    quadro_suspeitos.metric("Total de suspeitos", f"{total_suspeitos:,}".replace(",", "."))
+    quadro_suspeitos.metric("Total de candidatos", f"{total_suspeitos:,}".replace(",", "."))
     quadro_municipios_col.metric("Total de municípios", f"{total_municipios:,}".replace(",", "."))
     
 
@@ -488,7 +488,7 @@ elif st.session_state.aba == "Candidatos":
                 )
     
 
-    st.subheader("Ranking de maiores suspeitos (por potência total)")
+    st.subheader("Ranking de principais candidatos (por potência total)")
     # exibir tabela compacta e permitir seleção de um titular
     # col_rank, col_map = st.columns([1, 2])
     # with col_rank:
@@ -595,7 +595,7 @@ elif st.session_state.aba == "Mapeamento":
         st.info("Nenhum município com dados para o parâmetro selecionado.")
 
     fig.update_geos(fitbounds="locations", visible=False)
-    fig.update_layout(margin={"r":0,"t":40,"l":0,"b":0}, title_text=f"Mapa de calor de municípios scom candidatos a fiscalização - {parametro.replace('_',' ').title()}")
+    fig.update_layout(margin={"r":0,"t":40,"l":0,"b":0}, title_text=f"Mapa de municípios com candidatos a fiscalização - {parametro.replace('_',' ').title()}")
 
     # deixar fundo do gráfico transparente
     fig.update_layout(
@@ -633,7 +633,7 @@ elif st.session_state.aba == "Mapeamento":
         on="cep_normalizado",
         how="left"
     )
-    st.subheader("Mapa de empreendimentos suspeitos")
+    st.subheader("Mapa de empreendimentos candidatos a fiscalização")
 
     # seleção de titular
     # titular_selecionado = st.selectbox(
