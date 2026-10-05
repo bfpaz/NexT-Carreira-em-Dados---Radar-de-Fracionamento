@@ -32,8 +32,8 @@ Principais campos utilizados:
 
 - Titular e empreendimento;
 - Município e distribuidora;
-- Potência instalada e data de conexão;
-- Fonte, subgrupo e unidade beneficiária.
+- Potência instalada;
+- Fonte, subgrupo e classe de consumo.
 
 ## Pipeline de dados
 
@@ -57,7 +57,7 @@ Lista para análise humana/fiscalização
 
 1. Quais titulares possuem múltiplos empreendimentos no mesmo município, com potência total acima do limiar definido?
 2. As conexões desses empreendimentos ocorreram próximas no tempo?
-3. Qual potência está associada aos casos identificados?
+3. Qual potência total está associada aos casos identificados?
 4. Quais municípios concentram mais indícios?
 5. Quais fontes, classes e subgrupos apresentam maior concentração de casos?
 
@@ -65,9 +65,8 @@ Lista para análise humana/fiscalização
 
 | Integrante | Papel | Responsabilidades principais |
 | --- | --- | --- |
-| **Bruno** | PO / Engenharia de Dados | Backlog, requisitos, prioridades e pipeline de ingestão, transformação e carga. |
-| **Danilo** | SM / Análise de Dados | Organização das sprints, remoção de impedimentos, análise exploratória e regras de negócio. |
-| **Márcio** | QA de Dados / Análise de Dados | Qualidade dos dados, testes da pipeline, validação dos resultados e análises. |
+| **Bruno** | PO / Engenharia de Dados / QA de dados | Backlog, requisitos, prioridades e pipeline de ingestão, transformação e carga. |
+| **Danilo** | SM / Análise de Dados / Viz. de Dados | Organização das sprints, remoção de impedimentos, análise exploratória e regras de negócio. |
 | **Felipe** | Modelagem, Banco e Visualização de Dados | Modelagem, estruturação do banco, indicadores, dashboards e visualizações. |
 
 ## Mentores
@@ -85,22 +84,30 @@ O projeto contou com a orientação dos mentores **Erick**, **Marcio** e **João
 
 ## Cuidados e limitações
 
-- Um mesmo titular pode constar com grafias diferentes, exigindo normalização;
-- Nomes semelhantes podem gerar agrupamentos incorretos;
-- O limiar de potência deve ser definido e validado com a demandante;
-- Os resultados são indícios e requerem avaliação humana;
-- Dados de titulares devem ser tratados com atenção, evitando exposição desnecessária de informações pessoais;
-- Informações individuais não devem ser publicadas quando não forem necessárias.
+[x] Um mesmo titular pode constar com grafias diferentes, exigindo normalização;
+[x] Nomes semelhantes podem gerar agrupamentos incorretos;
+[x] O limiar de potência deve ser definido e validado com a demandante;
+[x] Os resultados são indícios e requerem avaliação humana;
+[x] Dados de titulares devem ser tratados com atenção, evitando exposição desnecessária de informações pessoais;
+[x] Informações individuais não devem ser publicadas quando não forem necessárias.
 
-## Próximos passos
+## Passo a passo para utilização desta ferramenta
 
-- [ ] Organizar o backlog e a arquitetura inicial;
-- [ ] Baixar e explorar a base pública;
-- [ ] Definir a estratégia de normalização dos titulares;
-- [ ] Validar o limiar de potência da regra;
-- [ ] Implementar ingestão, tratamento e testes de qualidade;
-- [ ] Modelar o banco e implementar as regras de identificação;
-- [ ] Desenvolver o ranking, dashboard e documentação final.
+```text
+Baixar este repositório em um ambiente local
+          ↓
+Criar um banco de dados no postgres utilizando o arquivo sql/schema.sql
+          ↓
+Editar o arquivo pipeline/.env com as informações pertinentes à conexão do seu banco
+          ↓
+Rodar o aquivo pipeline/_main.py
+          ↓
+Replicar o ambiente anterior no arquivo dashboard/.env
+          ↓
+Rodar o comando streamlit run dashboard.py no terminal dentro da pasta dashboard
+          ↓
+Utilizar o dashboard livremente
+```
 
 ## Resultado esperado
 
