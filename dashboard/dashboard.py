@@ -535,7 +535,7 @@ elif st.session_state.aba == "Mapeamento":
     mapa_dados = mapa.merge(quadro_municipios, on="nome_chave", how="left", suffixes=("_malha", "_dados"))
 
     # Selecionar parâmetro e construir mapa
-    parametro = st.selectbox("Selecione o parâmetro para o mapa", options=["potencia_total_kw", "qtd_usinas"], width=225)
+    parametro = st.selectbox("Selecione o parâmetro para o mapa", options=["potencia_total_kw", "qtd_usinas"])
 
     # Garantir colunas numéricas
     mapa_dados["qtd_usinas"] = pd.to_numeric(mapa_dados.get("qtd_usinas", 0), errors="coerce")
