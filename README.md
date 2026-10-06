@@ -96,6 +96,8 @@ O projeto contou com a orientação dos mentores **Erick**, **Marcio** e **João
 ```text
 Baixar este repositório em um ambiente local
           ↓
+Instalar requirements.txt
+          ↓
 Criar um banco de dados no postgres utilizando o arquivo sql/schema.sql
           ↓
 Editar o arquivo pipeline/.env com as informações pertinentes à conexão do seu banco
