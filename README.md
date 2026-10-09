@@ -63,11 +63,11 @@ Lista para análise humana/fiscalização
 
 ## Equipe
 
-| Integrante | Papel | Responsabilidades principais |
-| --- | --- | --- |
-| **Bruno** | PO / Engenharia de Dados / QA de dados | Backlog, requisitos, prioridades e pipeline de ingestão, transformação e carga. |
-| **Danilo** | SM / Análise de Dados / Viz. de Dados | Organização das sprints, remoção de impedimentos, análise exploratória e regras de negócio. |
-| **Felipe** | Modelagem, Banco e Visualização de Dados | Modelagem, estruturação do banco, indicadores, dashboards e visualizações. |
+| Integrante | Papel | Responsabilidades principais | Contato |
+| --- | --- | --- | --- |
+| **Bruno** | PO / Engenharia de Dados / QA de dados | Backlog, requisitos, prioridades e pipeline de ingestão, transformação e carga. |  |
+| **Danilo** | SM / Análise de Dados / Viz. de Dados | Organização das sprints, remoção de impedimentos, análise exploratória e regras de negócio. | danilo.vitorino@ufpe.br |
+| **Felipe** | Modelagem, Banco e Visualização de Dados | Modelagem, estruturação do banco, indicadores, dashboards e visualizações. |  |
 
 ## Mentores
 
